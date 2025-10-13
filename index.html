@@ -1,0 +1,1785 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>EmergencyMesh - Crisis Communication</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        :root {
+            /* Emergency color scheme */
+            --primary-color: #d32f2f;
+            --secondary-color: #ff9800;
+            --success-color: #4caf50;
+            --warning-color: #ffc107;
+            --danger-color: #f44336;
+            --background: #f5f5f5;
+            --surface: #ffffff;
+            --text-primary: #212121;
+            --text-secondary: #757575;
+            --border-color: #e0e0e0;
+            --emergency-pulse: #ff1744;
+            
+            /* Spacing & layout */
+            --spacing-xs: 4px;
+            --spacing-sm: 8px;
+            --spacing-md: 16px;
+            --spacing-lg: 24px;
+            --spacing-xl: 32px;
+            --border-radius: 12px;
+            --shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            --shadow-lg: 0 10px 25px rgba(0, 0, 0, 0.15);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--background);
+            color: var(--text-primary);
+            line-height: 1.6;
+            overflow-x: hidden;
+        }
+
+        /* Loading spinner */
+        .spinner {
+            width: 40px;
+            height: 40px;
+            border: 4px solid var(--border-color);
+            border-top: 4px solid var(--primary-color);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        /* SOS pulse animation */
+        @keyframes pulse {
+            0% { transform: scale(1); box-shadow: 0 0 0 0 rgba(255, 23, 68, 0.7); }
+            70% { transform: scale(1.05); box-shadow: 0 0 0 10px rgba(255, 23, 68, 0); }
+            100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(255, 23, 68, 0); }
+        }
+
+        /* Container & Layout */
+        .app-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .screen {
+            display: none;
+            flex: 1;
+            padding: var(--spacing-md);
+            animation: fadeIn 0.3s ease-in-out;
+        }
+
+        .screen.active {
+            display: flex;
+            flex-direction: column;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* Header */
+        .header {
+            background: var(--surface);
+            padding: var(--spacing-md) var(--spacing-lg);
+            box-shadow: var(--shadow);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        .header h1 {
+            color: var(--primary-color);
+            font-size: 1.8rem;
+            font-weight: 700;
+        }
+
+        .header .status {
+            display: flex;
+            align-items: center;
+            gap: var(--spacing-sm);
+        }
+
+        .status-dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background: var(--success-color);
+            animation: blink 2s infinite;
+        }
+
+        .status-dot.disconnected {
+            background: var(--danger-color);
+        }
+
+        @keyframes blink {
+            0%, 50% { opacity: 1; }
+            51%, 100% { opacity: 0.3; }
+        }
+
+        /* Navigation */
+        .nav-bar {
+            background: var(--surface);
+            padding: var(--spacing-md);
+            box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.1);
+            display: flex;
+            justify-content: space-around;
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            z-index: 100;
+        }
+
+        .nav-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: var(--spacing-xs);
+            color: var(--text-secondary);
+            cursor: pointer;
+            transition: color 0.3s ease;
+            padding: var(--spacing-sm);
+            border-radius: var(--border-radius);
+            min-width: 60px;
+        }
+
+        .nav-item.active {
+            color: var(--primary-color);
+            background: rgba(211, 47, 47, 0.1);
+        }
+
+        .nav-item i {
+            font-size: 1.2rem;
+        }
+
+        .nav-item span {
+            font-size: 0.75rem;
+            font-weight: 500;
+        }
+
+        /* Cards */
+        .card {
+            background: var(--surface);
+            border-radius: var(--border-radius);
+            box-shadow: var(--shadow);
+            padding: var(--spacing-lg);
+            margin-bottom: var(--spacing-md);
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+
+        .card:hover {
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-lg);
+        }
+
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: var(--spacing-md);
+        }
+
+        .card-title {
+            font-size: 1.2rem;
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+
+        /* Buttons */
+        .btn {
+            padding: var(--spacing-md) var(--spacing-lg);
+            border: none;
+            border-radius: var(--border-radius);
+            font-size: 1rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: var(--spacing-sm);
+            text-decoration: none;
+            outline: none;
+        }
+
+        .btn:focus {
+            outline: 2px solid var(--primary-color);
+            outline-offset: 2px;
+        }
+
+        .btn-primary {
+            background: var(--primary-color);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: #b71c1c;
+            transform: translateY(-1px);
+        }
+
+        .btn-secondary {
+            background: var(--secondary-color);
+            color: white;
+        }
+
+        .btn-secondary:hover {
+            background: #f57c00;
+        }
+
+        .btn-success {
+            background: var(--success-color);
+            color: white;
+        }
+
+        .btn-danger {
+            background: var(--danger-color);
+            color: white;
+        }
+
+        .btn-outline {
+            background: transparent;
+            border: 2px solid var(--primary-color);
+            color: var(--primary-color);
+        }
+
+        .btn-outline:hover {
+            background: var(--primary-color);
+            color: white;
+        }
+
+        .btn-sos {
+            background: var(--emergency-pulse);
+            color: white;
+            font-size: 1.5rem;
+            padding: var(--spacing-lg) var(--spacing-xl);
+            animation: pulse 2s infinite;
+            font-weight: 700;
+        }
+
+        /* Form elements */
+        .form-group {
+            margin-bottom: var(--spacing-md);
+        }
+
+        .form-label {
+            display: block;
+            margin-bottom: var(--spacing-sm);
+            font-weight: 500;
+            color: var(--text-primary);
+        }
+
+        .form-input {
+            width: 100%;
+            padding: var(--spacing-md);
+            border: 2px solid var(--border-color);
+            border-radius: var(--border-radius);
+            font-size: 1rem;
+            transition: border-color 0.2s ease;
+            background: var(--surface);
+        }
+
+        .form-input:focus {
+            outline: none;
+            border-color: var(--primary-color);
+        }
+
+        .form-select {
+            width: 100%;
+            padding: var(--spacing-md);
+            border: 2px solid var(--border-color);
+            border-radius: var(--border-radius);
+            font-size: 1rem;
+            background: var(--surface);
+            cursor: pointer;
+        }
+
+        /* Chat interface */
+        .chat-container {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            height: calc(100vh - 200px);
+        }
+
+        .chat-messages {
+            flex: 1;
+            overflow-y: auto;
+            padding: var(--spacing-md);
+            background: #fafafa;
+        }
+
+        .message {
+            margin-bottom: var(--spacing-md);
+            display: flex;
+            align-items: flex-start;
+            gap: var(--spacing-sm);
+        }
+
+        .message.own {
+            flex-direction: row-reverse;
+        }
+
+        .message-bubble {
+            max-width: 70%;
+            padding: var(--spacing-md);
+            border-radius: var(--border-radius);
+            position: relative;
+        }
+
+        .message.own .message-bubble {
+            background: var(--primary-color);
+            color: white;
+        }
+
+        .message:not(.own) .message-bubble {
+            background: var(--surface);
+            color: var(--text-primary);
+        }
+
+        .message-emergency .message-bubble {
+            background: var(--danger-color) !important;
+            color: white !important;
+            border: 2px solid var(--emergency-pulse);
+            animation: emergency-flash 0.5s ease-in-out;
+        }
+
+        @keyframes emergency-flash {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.8; }
+        }
+
+        .message-meta {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 0.8rem;
+            margin-top: var(--spacing-xs);
+            opacity: 0.7;
+        }
+
+        .chat-input-container {
+            padding: var(--spacing-md);
+            background: var(--surface);
+            border-top: 1px solid var(--border-color);
+            display: flex;
+            gap: var(--spacing-sm);
+        }
+
+        .chat-input {
+            flex: 1;
+            padding: var(--spacing-md);
+            border: 2px solid var(--border-color);
+            border-radius: 25px;
+            font-size: 1rem;
+            outline: none;
+        }
+
+        .chat-input:focus {
+            border-color: var(--primary-color);
+        }
+
+        .send-btn {
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            border: none;
+            background: var(--primary-color);
+            color: white;
+            cursor: pointer;
+            font-size: 1.2rem;
+            transition: transform 0.2s ease;
+        }
+
+        .send-btn:hover {
+            transform: scale(1.05);
+        }
+
+        /* Emergency templates */
+        .template-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: var(--spacing-md);
+            margin-bottom: var(--spacing-xl);
+        }
+
+        .template-card {
+            background: var(--surface);
+            border-radius: var(--border-radius);
+            padding: var(--spacing-lg);
+            border-left: 4px solid var(--primary-color);
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .template-card:hover {
+            transform: translateX(4px);
+            box-shadow: var(--shadow-lg);
+        }
+
+        .template-card.medical {
+            border-left-color: var(--danger-color);
+        }
+
+        .template-card.safety {
+            border-left-color: var(--warning-color);
+        }
+
+        .template-card.location {
+            border-left-color: var(--secondary-color);
+        }
+
+        .template-card.status {
+            border-left-color: var(--success-color);
+        }
+
+        .template-title {
+            font-weight: 600;
+            margin-bottom: var(--spacing-sm);
+            display: flex;
+            align-items: center;
+            gap: var(--spacing-sm);
+        }
+
+        /* Network visualization */
+        .network-canvas {
+            width: 100%;
+            height: 400px;
+            border: 2px solid var(--border-color);
+            border-radius: var(--border-radius);
+            background: var(--surface);
+        }
+
+        .network-stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: var(--spacing-md);
+            margin-bottom: var(--spacing-lg);
+        }
+
+        .stat-card {
+            background: var(--surface);
+            padding: var(--spacing-lg);
+            border-radius: var(--border-radius);
+            text-align: center;
+            border: 2px solid var(--border-color);
+        }
+
+        .stat-value {
+            font-size: 2rem;
+            font-weight: 700;
+            color: var(--primary-color);
+        }
+
+        .stat-label {
+            color: var(--text-secondary);
+            margin-top: var(--spacing-xs);
+        }
+
+        /* Device list */
+        .device-list {
+            display: flex;
+            flex-direction: column;
+            gap: var(--spacing-sm);
+        }
+
+        .device-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: var(--spacing-md);
+            background: var(--surface);
+            border-radius: var(--border-radius);
+            border: 1px solid var(--border-color);
+        }
+
+        .device-info {
+            display: flex;
+            align-items: center;
+            gap: var(--spacing-md);
+        }
+
+        .device-avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: var(--primary-color);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: 600;
+        }
+
+        .device-details h4 {
+            margin: 0;
+            font-size: 1rem;
+        }
+
+        .device-details p {
+            margin: 0;
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+        }
+
+        .signal-strength {
+            display: flex;
+            align-items: center;
+            gap: var(--spacing-xs);
+        }
+
+        .signal-bar {
+            width: 4px;
+            height: 16px;
+            background: var(--border-color);
+            border-radius: 2px;
+        }
+
+        .signal-bar.active {
+            background: var(--success-color);
+        }
+
+        /* Dashboard grid */
+        .dashboard-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: var(--spacing-lg);
+            margin-bottom: 100px;
+        }
+
+        /* Quick actions */
+        .quick-actions {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+            gap: var(--spacing-md);
+            margin-bottom: var(--spacing-lg);
+        }
+
+        .quick-action {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: var(--spacing-lg);
+            background: var(--surface);
+            border-radius: var(--border-radius);
+            cursor: pointer;
+            transition: all 0.2s ease;
+            border: 2px solid transparent;
+        }
+
+        .quick-action:hover {
+            transform: translateY(-2px);
+            border-color: var(--primary-color);
+        }
+
+        .quick-action i {
+            font-size: 2rem;
+            color: var(--primary-color);
+            margin-bottom: var(--spacing-sm);
+        }
+
+        .quick-action span {
+            font-weight: 500;
+            text-align: center;
+        }
+
+        /* Settings */
+        .settings-section {
+            margin-bottom: var(--spacing-xl);
+        }
+
+        .settings-section h3 {
+            margin-bottom: var(--spacing-lg);
+            color: var(--text-primary);
+            font-size: 1.3rem;
+        }
+
+        .settings-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: var(--spacing-md) 0;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .settings-item:last-child {
+            border-bottom: none;
+        }
+
+        .toggle-switch {
+            position: relative;
+            width: 50px;
+            height: 24px;
+            background: var(--border-color);
+            border-radius: 12px;
+            cursor: pointer;
+            transition: background 0.2s ease;
+        }
+
+        .toggle-switch.active {
+            background: var(--primary-color);
+        }
+
+        .toggle-switch::after {
+            content: '';
+            position: absolute;
+            top: 2px;
+            left: 2px;
+            width: 20px;
+            height: 20px;
+            background: white;
+            border-radius: 50%;
+            transition: transform 0.2s ease;
+        }
+
+        .toggle-switch.active::after {
+            transform: translateX(26px);
+        }
+
+        /* Modal */
+        .modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+
+        .modal.active {
+            display: flex;
+        }
+
+        .modal-content {
+            background: var(--surface);
+            padding: var(--spacing-xl);
+            border-radius: var(--border-radius);
+            max-width: 500px;
+            width: 90%;
+            max-height: 80vh;
+            overflow-y: auto;
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: var(--spacing-lg);
+        }
+
+        .modal-close {
+            background: none;
+            border: none;
+            font-size: 1.5rem;
+            cursor: pointer;
+            color: var(--text-secondary);
+        }
+
+        /* Responsive design */
+        @media (max-width: 768px) {
+            .app-container {
+                padding: 0;
+            }
+            
+            .header {
+                padding: var(--spacing-md);
+            }
+            
+            .header h1 {
+                font-size: 1.4rem;
+            }
+            
+            .dashboard-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .template-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .quick-actions {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+
+        /* Loading states */
+        .loading {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: var(--spacing-xl);
+        }
+
+        /* Toast notifications */
+        .toast {
+            position: fixed;
+            top: var(--spacing-lg);
+            right: var(--spacing-lg);
+            background: var(--surface);
+            padding: var(--spacing-md) var(--spacing-lg);
+            border-radius: var(--border-radius);
+            box-shadow: var(--shadow-lg);
+            z-index: 1001;
+            transform: translateX(100%);
+            transition: transform 0.3s ease;
+        }
+
+        .toast.show {
+            transform: translateX(0);
+        }
+
+        .toast.success {
+            border-left: 4px solid var(--success-color);
+        }
+
+        .toast.error {
+            border-left: 4px solid var(--danger-color);
+        }
+
+        .toast.warning {
+            border-left: 4px solid var(--warning-color);
+        }
+
+        /* Hide nav on small screens when keyboard is open */
+        @media (max-height: 500px) {
+            .nav-bar {
+                display: none;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="app-container">
+        <!-- Header -->
+        <div class="header">
+            <h1><i class="fas fa-broadcast-tower"></i> EmergencyMesh</h1>
+            <div class="status">
+                <div class="status-dot" id="connectionStatus"></div>
+                <span id="statusText">Connected</span>
+                <span id="deviceCount">(0 devices)</span>
+            </div>
+        </div>
+
+        <!-- Onboarding Screen -->
+        <div class="screen active" id="onboardingScreen">
+            <div class="card" style="text-align: center; margin-top: 50px;">
+                <h2 style="color: var(--primary-color); margin-bottom: var(--spacing-lg);">Welcome to EmergencyMesh</h2>
+                <p style="font-size: 1.1rem; margin-bottom: var(--spacing-xl); color: var(--text-secondary);">Professional crisis communication system for emergency situations. Connect with nearby devices even without internet or cellular service.</p>
+                
+                <div class="form-group">
+                    <label class="form-label">Your Name / Callsign</label>
+                    <input type="text" class="form-input" id="userName" placeholder="Enter your name or emergency callsign" required>
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label">Device Role</label>
+                    <select class="form-select" id="deviceRole">
+                        <option value="civilian">Civilian - General emergency user</option>
+                        <option value="coordinator">Coordinator - Emergency coordination hub</option>
+                        <option value="responder">Responder - Emergency response team member</option>
+                        <option value="relay">Relay - Message relay point</option>
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label">Emergency Contact</label>
+                    <input type="text" class="form-input" id="emergencyContact" placeholder="Primary emergency contact info">
+                </div>
+                
+                <button class="btn btn-primary" onclick="completeOnboarding()" style="width: 100%; font-size: 1.2rem; margin-top: var(--spacing-lg);">
+                    <i class="fas fa-rocket"></i> Start EmergencyMesh
+                </button>
+            </div>
+        </div>
+
+        <!-- Dashboard Screen -->
+        <div class="screen" id="dashboardScreen">
+            <div class="dashboard-grid">
+                <!-- Network Status -->
+                <div class="card">
+                    <div class="card-header">
+                        <h3 class="card-title"><i class="fas fa-network-wired"></i> Network Status</h3>
+                        <span class="status-dot" id="networkStatusDot"></span>
+                    </div>
+                    <div class="network-stats">
+                        <div class="stat-card">
+                            <div class="stat-value" id="connectedDevices">0</div>
+                            <div class="stat-label">Connected Devices</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-value" id="messageCount">0</div>
+                            <div class="stat-label">Messages Sent</div>
+                        </div>
+                    </div>
+                    <button class="btn btn-outline" onclick="showScreen('networkScreen')" style="width: 100%; margin-top: var(--spacing-md);">
+                        <i class="fas fa-cogs"></i> Network Settings
+                    </button>
+                </div>
+
+                <!-- Emergency Actions -->
+                <div class="card">
+                    <div class="card-header">
+                        <h3 class="card-title"><i class="fas fa-exclamation-triangle"></i> Emergency Actions</h3>
+                    </div>
+                    <button class="btn btn-sos" onclick="sendSOSAlert()" style="width: 100%; margin-bottom: var(--spacing-md);">
+                        <i class="fas fa-broadcast-tower"></i> SEND SOS ALERT
+                    </button>
+                    <div class="quick-actions">
+                        <div class="quick-action" onclick="sendQuickMessage('🏥 MEDICAL EMERGENCY - Need immediate medical assistance')">
+                            <i class="fas fa-plus-circle" style="color: var(--danger-color);"></i>
+                            <span>Medical</span>
+                        </div>
+                        <div class="quick-action" onclick="sendQuickMessage('🔥 FIRE - Fire emergency, evacuating area')">
+                            <i class="fas fa-fire" style="color: var(--warning-color);"></i>
+                            <span>Fire</span>
+                        </div>
+                        <div class="quick-action" onclick="sendQuickMessage('⛈️ WEATHER - Severe weather, taking shelter')">
+                            <i class="fas fa-cloud-rain" style="color: var(--secondary-color);"></i>
+                            <span>Weather</span>
+                        </div>
+                        <div class="quick-action" onclick="sendQuickMessage('✅ SAFE - I am safe and accounted for')">
+                            <i class="fas fa-check-circle" style="color: var(--success-color);"></i>
+                            <span>Safe</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Recent Messages -->
+                <div class="card">
+                    <div class="card-header">
+                        <h3 class="card-title"><i class="fas fa-comments"></i> Recent Activity</h3>
+                        <button class="btn btn-primary" onclick="showScreen('chatScreen')">
+                            <i class="fas fa-comment-alt"></i> Open Chat
+                        </button>
+                    </div>
+                    <div id="recentMessages">
+                        <p style="text-align: center; color: var(--text-secondary); padding: var(--spacing-lg);">No recent messages</p>
+                    </div>
+                </div>
+
+                <!-- Battery & System -->
+                <div class="card">
+                    <div class="card-header">
+                        <h3 class="card-title"><i class="fas fa-battery-three-quarters"></i> System Status</h3>
+                    </div>
+                    <div class="form-group">
+                        <div style="display: flex; justify-content: space-between; align-items: center;">
+                            <span>Power Saving Mode</span>
+                            <div class="toggle-switch" id="powerSavingToggle" onclick="togglePowerSaving()"></div>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <div style="display: flex; justify-content: space-between; align-items: center;">
+                            <span>Emergency Mode</span>
+                            <div class="toggle-switch" id="emergencyModeToggle" onclick="toggleEmergencyMode()"></div>
+                        </div>
+                    </div>
+                    <p style="font-size: 0.9rem; color: var(--text-secondary); margin-top: var(--spacing-md);">Runtime: <span id="systemUptime">0h 0m</span></p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Chat Screen -->
+        <div class="screen" id="chatScreen">
+            <div class="chat-container">
+                <div class="card-header" style="background: var(--surface); padding: var(--spacing-md); margin-bottom: 0;">
+                    <h3 class="card-title"><i class="fas fa-comments"></i> Emergency Chat</h3>
+                    <button class="btn btn-outline" onclick="showScreen('templatesScreen')">
+                        <i class="fas fa-clipboard-list"></i> Templates
+                    </button>
+                </div>
+                <div class="chat-messages" id="chatMessages">
+                    <div class="message">
+                        <div class="message-bubble">
+                            <div>Welcome to EmergencyMesh! This is a secure peer-to-peer communication channel for emergency situations.</div>
+                            <div class="message-meta">
+                                <span>System</span>
+                                <span>Just now</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="chat-input-container">
+                    <input type="text" class="chat-input" id="messageInput" placeholder="Type your message..." onkeypress="handleEnterKey(event)">
+                    <button class="send-btn" onclick="sendMessage()">
+                        <i class="fas fa-paper-plane"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Emergency Templates Screen -->
+        <div class="screen" id="templatesScreen">
+            <div class="card-header">
+                <h2><i class="fas fa-clipboard-list"></i> Emergency Templates</h2>
+                <p style="color: var(--text-secondary); margin: var(--spacing-sm) 0 var(--spacing-lg) 0;">Quick access to pre-configured emergency messages</p>
+            </div>
+            
+            <div class="template-grid">
+                <!-- Medical Templates -->
+                <div class="card template-card medical">
+                    <h4 class="template-title"><i class="fas fa-plus-circle"></i> Medical Emergency</h4>
+                    <div class="template-list">
+                        <div class="template-item" onclick="sendTemplate('🏥 MEDICAL EMERGENCY - Need immediate medical assistance')">🏥 Medical Emergency - Need assistance</div>
+                        <div class="template-item" onclick="sendTemplate('🩸 INJURY - Person injured, need first aid help')">🩸 Injury - Need first aid help</div>
+                        <div class="template-item" onclick="sendTemplate('💊 MEDICATION - Need emergency medication/insulin')">💊 Need emergency medication</div>
+                        <div class="template-item" onclick="sendTemplate('🚑 AMBULANCE - Need ambulance at my location')">🚑 Need ambulance at location</div>
+                    </div>
+                </div>
+
+                <!-- Safety Templates -->
+                <div class="card template-card safety">
+                    <h4 class="template-title"><i class="fas fa-exclamation-triangle"></i> Safety Emergency</h4>
+                    <div class="template-list">
+                        <div class="template-item" onclick="sendTemplate('🆘 HELP - Need immediate assistance at my location')">🆘 Need immediate assistance</div>
+                        <div class="template-item" onclick="sendTemplate('🔥 FIRE - Fire emergency, evacuating area')">🔥 Fire emergency, evacuating</div>
+                        <div class="template-item" onclick="sendTemplate('⛈️ WEATHER - Severe weather, taking shelter')">⛈️ Severe weather, sheltering</div>
+                        <div class="template-item" onclick="sendTemplate('🏠 SHELTER - Need emergency shelter/safe place')">🏠 Need emergency shelter</div>
+                    </div>
+                </div>
+
+                <!-- Location Templates -->
+                <div class="card template-card location">
+                    <h4 class="template-title"><i class="fas fa-map-marker-alt"></i> Location &amp; Transport</h4>
+                    <div class="template-list">
+                        <div class="template-item" onclick="sendTemplate('🧭 LOST - Lost and need navigation assistance')">🧭 Lost, need navigation help</div>
+                        <div class="template-item" onclick="sendTemplate('🚗 VEHICLE - Car broken down, need help')">🚗 Vehicle breakdown, need help</div>
+                        <div class="template-item" onclick="sendTemplate('⛰️ TERRAIN - Stuck in difficult terrain')">⛰️ Stuck in difficult terrain</div>
+                        <div class="template-item" onclick="sendTemplate('📍 LOCATION - Sharing my current position')">📍 Sharing current position</div>
+                    </div>
+                </div>
+
+                <!-- Status Templates -->
+                <div class="card template-card status">
+                    <h4 class="template-title"><i class="fas fa-check-circle"></i> Status Updates</h4>
+                    <div class="template-list">
+                        <div class="template-item" onclick="sendTemplate('✅ SAFE - I am safe and accounted for')">✅ I am safe and accounted for</div>
+                        <div class="template-item" onclick="sendTemplate('🟢 ALL CLEAR - Area is safe, danger passed')">🟢 All clear, danger passed</div>
+                        <div class="template-item" onclick="sendTemplate('📞 CHECK IN - Regular status update')">📞 Regular status check-in</div>
+                        <div class="template-item" onclick="sendTemplate('🏃 EVACUATING - Currently evacuating area')">🏃 Currently evacuating area</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Network Screen -->
+        <div class="screen" id="networkScreen">
+            <div class="card-header">
+                <h2><i class="fas fa-network-wired"></i> Network Management</h2>
+            </div>
+
+            <!-- Network Visualization -->
+            <div class="card">
+                <div class="card-header">
+                    <h3 class="card-title">Network Topology</h3>
+                    <button class="btn btn-secondary" onclick="refreshNetwork()">
+                        <i class="fas fa-sync-alt"></i> Refresh
+                    </button>
+                </div>
+                <canvas class="network-canvas" id="networkCanvas"></canvas>
+            </div>
+
+            <!-- Connected Devices -->
+            <div class="card">
+                <div class="card-header">
+                    <h3 class="card-title">Connected Devices (<span id="deviceCountDisplay">0</span>)</h3>
+                    <button class="btn btn-primary" onclick="scanForDevices()">
+                        <i class="fas fa-search"></i> Scan
+                    </button>
+                </div>
+                <div class="device-list" id="deviceList">
+                    <p style="text-align: center; color: var(--text-secondary); padding: var(--spacing-lg);">No devices connected. Click 'Scan' to discover nearby devices.</p>
+                </div>
+            </div>
+
+            <!-- Network Settings -->
+            <div class="card">
+                <h3 class="card-title">Network Configuration</h3>
+                <div class="form-group">
+                    <label class="form-label">Network Name</label>
+                    <input type="text" class="form-input" id="networkName" value="EmergencyMesh-Network">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Max Hop Count</label>
+                    <select class="form-select" id="maxHops">
+                        <option value="5">5 hops</option>
+                        <option value="10">10 hops</option>
+                        <option value="15" selected>15 hops</option>
+                        <option value="20">20 hops</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <span>Auto-reconnect</span>
+                        <div class="toggle-switch active" id="autoReconnectToggle" onclick="toggleAutoReconnect()"></div>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <span>Message Encryption</span>
+                        <div class="toggle-switch active" id="encryptionToggle" onclick="toggleEncryption()"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Settings Screen -->
+        <div class="screen" id="settingsScreen">
+            <div class="card-header">
+                <h2><i class="fas fa-cog"></i> Settings</h2>
+            </div>
+
+            <div class="card">
+                <div class="settings-section">
+                    <h3>Profile Settings</h3>
+                    <div class="form-group">
+                        <label class="form-label">Display Name</label>
+                        <input type="text" class="form-input" id="displayName" value="">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Device Role</label>
+                        <select class="form-select" id="userRole">
+                            <option value="civilian">Civilian</option>
+                            <option value="coordinator">Coordinator</option>
+                            <option value="responder">Responder</option>
+                            <option value="relay">Relay</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Emergency Contact</label>
+                        <input type="text" class="form-input" id="emergencyContactSetting" value="">
+                    </div>
+                </div>
+
+                <div class="settings-section">
+                    <h3>Emergency Settings</h3>
+                    <div class="settings-item">
+                        <div>
+                            <strong>SOS Auto-broadcast</strong>
+                            <p style="font-size: 0.9rem; color: var(--text-secondary); margin: 0;">Automatically broadcast SOS to all devices</p>
+                        </div>
+                        <div class="toggle-switch active" id="sosAutoBroadcast" onclick="toggleSOSAutoBroadcast()"></div>
+                    </div>
+                    <div class="settings-item">
+                        <div>
+                            <strong>Location Sharing</strong>
+                            <p style="font-size: 0.9rem; color: var(--text-secondary); margin: 0;">Share location with emergency messages</p>
+                        </div>
+                        <div class="toggle-switch active" id="locationSharing" onclick="toggleLocationSharing()"></div>
+                    </div>
+                    <div class="settings-item">
+                        <div>
+                            <strong>Emergency Alerts</strong>
+                            <p style="font-size: 0.9rem; color: var(--text-secondary); margin: 0;">Receive emergency alerts from network</p>
+                        </div>
+                        <div class="toggle-switch active" id="emergencyAlerts" onclick="toggleEmergencyAlerts()"></div>
+                    </div>
+                </div>
+
+                <div class="settings-section">
+                    <h3>Privacy &amp; Security</h3>
+                    <div class="settings-item">
+                        <div>
+                            <strong>Message Encryption</strong>
+                            <p style="font-size: 0.9rem; color: var(--text-secondary); margin: 0;">End-to-end encrypt all messages</p>
+                        </div>
+                        <div class="toggle-switch active" id="messageEncryption" onclick="toggleMessageEncryption()"></div>
+                    </div>
+                    <div class="settings-item">
+                        <div>
+                            <strong>Anonymous Mode</strong>
+                            <p style="font-size: 0.9rem; color: var(--text-secondary); margin: 0;">Hide identity in non-emergency messages</p>
+                        </div>
+                        <div class="toggle-switch" id="anonymousMode" onclick="toggleAnonymousMode()"></div>
+                    </div>
+                </div>
+
+                <div class="settings-section">
+                    <h3>App Settings</h3>
+                    <div class="settings-item">
+                        <div>
+                            <strong>Dark Mode</strong>
+                            <p style="font-size: 0.9rem; color: var(--text-secondary); margin: 0;">Switch to dark theme for better visibility</p>
+                        </div>
+                        <div class="toggle-switch" id="darkModeToggle" onclick="toggleDarkMode()"></div>
+                    </div>
+                    <div class="settings-item">
+                        <div>
+                            <strong>Sound Alerts</strong>
+                            <p style="font-size: 0.9rem; color: var(--text-secondary); margin: 0;">Play sound for emergency messages</p>
+                        </div>
+                        <div class="toggle-switch active" id="soundAlerts" onclick="toggleSoundAlerts()"></div>
+                    </div>
+                </div>
+
+                <div class="form-group" style="margin-top: var(--spacing-xl);">
+                    <button class="btn btn-success" onclick="saveSettings()" style="width: 100%; margin-bottom: var(--spacing-md);">
+                        <i class="fas fa-save"></i> Save Settings
+                    </button>
+                    <button class="btn btn-danger" onclick="resetToDefaults()" style="width: 100%;">
+                        <i class="fas fa-undo"></i> Reset to Defaults
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Navigation -->
+        <div class="nav-bar">
+            <div class="nav-item active" onclick="showScreen('dashboardScreen')">
+                <i class="fas fa-tachometer-alt"></i>
+                <span>Dashboard</span>
+            </div>
+            <div class="nav-item" onclick="showScreen('chatScreen')">
+                <i class="fas fa-comments"></i>
+                <span>Chat</span>
+            </div>
+            <div class="nav-item" onclick="showScreen('templatesScreen')">
+                <i class="fas fa-clipboard-list"></i>
+                <span>Templates</span>
+            </div>
+            <div class="nav-item" onclick="showScreen('networkScreen')">
+                <i class="fas fa-network-wired"></i>
+                <span>Network</span>
+            </div>
+            <div class="nav-item" onclick="showScreen('settingsScreen')">
+                <i class="fas fa-cog"></i>
+                <span>Settings</span>
+            </div>
+        </div>
+
+        <!-- Modal for SOS Confirmation -->
+        <div class="modal" id="sosModal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h3 style="color: var(--danger-color);"><i class="fas fa-exclamation-triangle"></i> SOS Alert</h3>
+                    <button class="modal-close" onclick="closeSosModal()">&times;</button>
+                </div>
+                <p style="font-size: 1.1rem; margin-bottom: var(--spacing-lg);">This will send an emergency SOS alert to all connected devices. Are you sure you want to proceed?</p>
+                <div style="display: flex; gap: var(--spacing-md);">
+                    <button class="btn btn-danger" onclick="confirmSOS()" style="flex: 1;">
+                        <i class="fas fa-broadcast-tower"></i> Send SOS
+                    </button>
+                    <button class="btn btn-outline" onclick="closeSosModal()" style="flex: 1;">
+                        <i class="fas fa-times"></i> Cancel
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast Notification -->
+    <div class="toast" id="toast"></div>
+
+    <script>
+        // Application State
+        const appState = {
+            user: {
+                name: '',
+                role: 'civilian',
+                emergencyContact: ''
+            },
+            network: {
+                isConnected: false,
+                devices: [],
+                messages: [],
+                messageCount: 0
+            },
+            settings: {
+                powerSaving: false,
+                emergencyMode: false,
+                sosAutoBroadcast: true,
+                locationSharing: true,
+                emergencyAlerts: true,
+                messageEncryption: true,
+                anonymousMode: false,
+                darkMode: false,
+                soundAlerts: true,
+                autoReconnect: true
+            },
+            startTime: Date.now()
+        };
+
+        // Emergency Templates
+        const emergencyTemplates = {
+            medical: [
+                '🏥 MEDICAL EMERGENCY - Need immediate medical assistance',
+                '🩸 INJURY - Person injured, need first aid help',
+                '💊 MEDICATION - Need emergency medication/insulin',
+                '🚑 AMBULANCE - Need ambulance at my location'
+            ],
+            safety: [
+                '🆘 HELP - Need immediate assistance at my location',
+                '🔥 FIRE - Fire emergency, evacuating area',
+                '⛈️ WEATHER - Severe weather, taking shelter',
+                '🏠 SHELTER - Need emergency shelter/safe place'
+            ],
+            location: [
+                '🧭 LOST - Lost and need navigation assistance',
+                '🚗 VEHICLE - Car broken down, need help',
+                '⛰️ TERRAIN - Stuck in difficult terrain',
+                '📍 LOCATION - Sharing my current position'
+            ],
+            status: [
+                '✅ SAFE - I am safe and accounted for',
+                '🟢 ALL CLEAR - Area is safe, danger passed',
+                '📞 CHECK IN - Regular status update',
+                '🏃 EVACUATING - Currently evacuating area'
+            ]
+        };
+
+        // Initialize app
+        function initApp() {
+            updateSystemUptime();
+            setInterval(updateSystemUptime, 60000); // Update every minute
+            simulateNetworkActivity();
+        }
+
+        // Screen Management
+        function showScreen(screenId) {
+            // Hide all screens
+            document.querySelectorAll('.screen').forEach(screen => {
+                screen.classList.remove('active');
+            });
+            
+            // Show target screen
+            document.getElementById(screenId).classList.add('active');
+            
+            // Update navigation
+            document.querySelectorAll('.nav-item').forEach(item => {
+                item.classList.remove('active');
+            });
+            
+            // Find and activate corresponding nav item
+            const navItems = document.querySelectorAll('.nav-item');
+            const screenToNavMap = {
+                'dashboardScreen': 0,
+                'chatScreen': 1,
+                'templatesScreen': 2,
+                'networkScreen': 3,
+                'settingsScreen': 4
+            };
+            
+            const navIndex = screenToNavMap[screenId];
+            if (navIndex !== undefined && navItems[navIndex]) {
+                navItems[navIndex].classList.add('active');
+            }
+        }
+
+        // Onboarding
+        function completeOnboarding() {
+            const userName = document.getElementById('userName').value.trim();
+            const deviceRole = document.getElementById('deviceRole').value;
+            const emergencyContact = document.getElementById('emergencyContact').value.trim();
+            
+            if (!userName) {
+                showToast('Please enter your name or callsign', 'error');
+                return;
+            }
+            
+            appState.user = {
+                name: userName,
+                role: deviceRole,
+                emergencyContact: emergencyContact
+            };
+            
+            // Update settings fields
+            document.getElementById('displayName').value = userName;
+            document.getElementById('userRole').value = deviceRole;
+            document.getElementById('emergencyContactSetting').value = emergencyContact;
+            
+            showScreen('dashboardScreen');
+            showToast('Welcome to EmergencyMesh, ' + userName + '!', 'success');
+            
+            // Simulate connecting to network
+            setTimeout(() => {
+                connectToNetwork();
+            }, 2000);
+        }
+
+        // Network Management
+        function connectToNetwork() {
+            appState.network.isConnected = true;
+            updateNetworkStatus();
+            
+            // Simulate discovering devices
+            const demoDevices = [
+                { id: 'device1', name: 'Coordinator Alpha', role: 'coordinator', signal: 4, distance: '0.2km' },
+                { id: 'device2', name: 'Responder Beta', role: 'responder', signal: 3, distance: '0.8km' },
+                { id: 'device3', name: 'Civilian Gamma', role: 'civilian', signal: 2, distance: '1.5km' }
+            ];
+            
+            appState.network.devices = demoDevices;
+            updateDeviceList();
+            updateNetworkVisualization();
+            
+            showToast('Connected to EmergencyMesh network', 'success');
+        }
+
+        function updateNetworkStatus() {
+            const statusDot = document.getElementById('connectionStatus');
+            const statusText = document.getElementById('statusText');
+            const deviceCount = document.getElementById('deviceCount');
+            const networkStatusDot = document.getElementById('networkStatusDot');
+            const connectedDevices = document.getElementById('connectedDevices');
+            
+            if (appState.network.isConnected) {
+                statusDot.classList.remove('disconnected');
+                networkStatusDot.classList.remove('disconnected');
+                statusText.textContent = 'Connected';
+                deviceCount.textContent = `(${appState.network.devices.length} devices)`;
+                connectedDevices.textContent = appState.network.devices.length;
+            } else {
+                statusDot.classList.add('disconnected');
+                networkStatusDot.classList.add('disconnected');
+                statusText.textContent = 'Disconnected';
+                deviceCount.textContent = '(0 devices)';
+                connectedDevices.textContent = '0';
+            }
+        }
+
+        function updateDeviceList() {
+            const deviceList = document.getElementById('deviceList');
+            const deviceCountDisplay = document.getElementById('deviceCountDisplay');
+            
+            if (appState.network.devices.length === 0) {
+                deviceList.innerHTML = '<p style="text-align: center; color: var(--text-secondary); padding: var(--spacing-lg);">No devices connected. Click \'Scan\' to discover nearby devices.</p>';
+                deviceCountDisplay.textContent = '0';
+                return;
+            }
+            
+            deviceCountDisplay.textContent = appState.network.devices.length;
+            
+            deviceList.innerHTML = appState.network.devices.map(device => `
+                <div class="device-item">
+                    <div class="device-info">
+                        <div class="device-avatar">${device.name.charAt(0)}</div>
+                        <div class="device-details">
+                            <h4>${device.name}</h4>
+                            <p>${device.role} • ${device.distance}</p>
+                        </div>
+                    </div>
+                    <div class="signal-strength">
+                        ${Array.from({length: 4}, (_, i) => `
+                            <div class="signal-bar ${i < device.signal ? 'active' : ''}"></div>
+                        `).join('')}
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function scanForDevices() {
+            showToast('Scanning for nearby devices...', 'info');
+            
+            // Simulate scanning delay
+            setTimeout(() => {
+                const newDevice = {
+                    id: 'device' + (appState.network.devices.length + 1),
+                    name: 'Device ' + String.fromCharCode(65 + appState.network.devices.length),
+                    role: ['civilian', 'responder', 'relay'][Math.floor(Math.random() * 3)],
+                    signal: Math.floor(Math.random() * 4) + 1,
+                    distance: (Math.random() * 2).toFixed(1) + 'km'
+                };
+                
+                appState.network.devices.push(newDevice);
+                updateDeviceList();
+                updateNetworkStatus();
+                updateNetworkVisualization();
+                
+                showToast(`New device discovered: ${newDevice.name}`, 'success');
+            }, 2000);
+        }
+
+        function refreshNetwork() {
+            showToast('Refreshing network...', 'info');
+            updateNetworkVisualization();
+        }
+
+        // Network Visualization
+        function updateNetworkVisualization() {
+            const canvas = document.getElementById('networkCanvas');
+            const ctx = canvas.getContext('2d');
+            
+            // Set canvas size
+            canvas.width = canvas.offsetWidth;
+            canvas.height = canvas.offsetHeight;
+            
+            // Clear canvas
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            
+            if (appState.network.devices.length === 0) {
+                ctx.fillStyle = '#757575';
+                ctx.font = '16px Arial';
+                ctx.textAlign = 'center';
+                ctx.fillText('No network connections', canvas.width / 2, canvas.height / 2);
+                return;
+            }
+            
+            // Draw network nodes and connections
+            const centerX = canvas.width / 2;
+            const centerY = canvas.height / 2;
+            const radius = Math.min(canvas.width, canvas.height) * 0.3;
+            
+            // Draw center node (this device)
+            ctx.fillStyle = '#d32f2f';
+            ctx.beginPath();
+            ctx.arc(centerX, centerY, 20, 0, 2 * Math.PI);
+            ctx.fill();
+            
+            // Draw device nodes
+            appState.network.devices.forEach((device, index) => {
+                const angle = (index / appState.network.devices.length) * 2 * Math.PI;
+                const x = centerX + Math.cos(angle) * radius;
+                const y = centerY + Math.sin(angle) * radius;
+                
+                // Draw connection line
+                ctx.strokeStyle = device.signal > 2 ? '#4caf50' : '#ff9800';
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                ctx.moveTo(centerX, centerY);
+                ctx.lineTo(x, y);
+                ctx.stroke();
+                
+                // Draw device node
+                ctx.fillStyle = device.role === 'coordinator' ? '#4caf50' : 
+                               device.role === 'responder' ? '#ff9800' : '#2196f3';
+                ctx.beginPath();
+                ctx.arc(x, y, 15, 0, 2 * Math.PI);
+                ctx.fill();
+                
+                // Draw device label
+                ctx.fillStyle = '#212121';
+                ctx.font = '12px Arial';
+                ctx.textAlign = 'center';
+                ctx.fillText(device.name, x, y + 35);
+            });
+            
+            // Draw center label
+            ctx.fillStyle = '#ffffff';
+            ctx.font = '12px Arial';
+            ctx.textAlign = 'center';
+            ctx.fillText('You', centerX, centerY + 5);
+        }
+
+        // Messaging
+        function sendMessage() {
+            const input = document.getElementById('messageInput');
+            const message = input.value.trim();
+            
+            if (!message) return;
+            
+            addMessage(message, true);
+            input.value = '';
+            
+            appState.network.messageCount++;
+            document.getElementById('messageCount').textContent = appState.network.messageCount;
+            
+            // Simulate response (in real app, this would come from network)
+            setTimeout(() => {
+                simulateResponse(message);
+            }, 1000 + Math.random() * 2000);
+        }
+
+        function sendTemplate(template) {
+            showScreen('chatScreen');
+            setTimeout(() => {
+                document.getElementById('messageInput').value = template;
+                sendMessage();
+            }, 100);
+        }
+
+        function sendQuickMessage(message) {
+            addMessage(message, true, true); // true for isOwn, true for isEmergency
+            appState.network.messageCount++;
+            document.getElementById('messageCount').textContent = appState.network.messageCount;
+            showToast('Emergency message sent!', 'success');
+        }
+
+        function addMessage(text, isOwn = false, isEmergency = false) {
+            const messagesContainer = document.getElementById('chatMessages');
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `message ${isOwn ? 'own' : ''} ${isEmergency ? 'message-emergency' : ''}`;
+            
+            const timestamp = new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+            const sender = isOwn ? appState.user.name || 'You' : 'Network Device';
+            
+            messageDiv.innerHTML = `
+                <div class="message-bubble">
+                    <div>${text}</div>
+                    <div class="message-meta">
+                        <span>${sender}</span>
+                        <span>${timestamp}</span>
+                    </div>
+                </div>
+            `;
+            
+            messagesContainer.appendChild(messageDiv);
+            messagesContainer.scrollTop = messagesContainer.scrollHeight;
+            
+            // Add to recent messages on dashboard
+            updateRecentMessages(text, sender, timestamp, isEmergency);
+            
+            // Store message
+            appState.network.messages.push({
+                text,
+                sender,
+                timestamp,
+                isOwn,
+                isEmergency
+            });
+        }
+
+        function updateRecentMessages(text, sender, timestamp, isEmergency) {
+            const recentContainer = document.getElementById('recentMessages');
+            const messagePreview = text.length > 50 ? text.substring(0, 47) + '...' : text;
+            
+            const messageHtml = `
+                <div style="padding: var(--spacing-sm) 0; border-bottom: 1px solid var(--border-color); ${isEmergency ? 'color: var(--danger-color); font-weight: bold;' : ''}">
+                    <div style="font-weight: 500;">${sender}</div>
+                    <div style="font-size: 0.9rem; color: var(--text-secondary);">${messagePreview}</div>
+                    <div style="font-size: 0.8rem; color: var(--text-secondary);">${timestamp}</div>
+                </div>
+            `;
+            
+            if (recentContainer.innerHTML.includes('No recent messages')) {
+                recentContainer.innerHTML = messageHtml;
+            } else {
+                recentContainer.insertAdjacentHTML('afterbegin', messageHtml);
+            }
+        }
+
+        function simulateResponse(originalMessage) {
+            const responses = [
+                'Message received and acknowledged.',
+                'Roger that, standing by.',
+                'Copy, will relay to coordination.',
+                'Understood, assistance is en route.',
+                'Location noted, help is coming.',
+                'Confirmed, emergency services notified.'
+            ];
+            
+            if (originalMessage.includes('SOS') || originalMessage.includes('EMERGENCY')) {
+                addMessage('🚨 EMERGENCY ACKNOWLEDGED - Help is on the way! Stay calm and safe.', false, true);
+            } else {
+                const response = responses[Math.floor(Math.random() * responses.length)];
+                addMessage(response, false);
+            }
+        }
+
+        function handleEnterKey(event) {
+            if (event.key === 'Enter') {
+                sendMessage();
+            }
+        }
+
+        // SOS Alert System
+        function sendSOSAlert() {
+            document.getElementById('sosModal').classList.add('active');
+        }
+
+        function confirmSOS() {
+            closeSosModal();
+            
+            const sosMessage = `🆘 SOS ALERT - ${appState.user.name} needs immediate emergency assistance! Location: Emergency coordinates shared. Time: ${new Date().toLocaleString()}`;
+            
+            addMessage(sosMessage, true, true);
+            appState.network.messageCount++;
+            document.getElementById('messageCount').textContent = appState.network.messageCount;
+            
+            showToast('SOS Alert broadcasted to all devices!', 'success');
+            
+            // Simulate emergency responses
+            setTimeout(() => {
+                addMessage('🚨 EMERGENCY RESPONSE ACTIVATED - Coordinator Alpha acknowledging SOS', false, true);
+            }, 2000);
+            
+            setTimeout(() => {
+                addMessage('🚑 RESPONDER EN ROUTE - ETA 5 minutes to your location', false, true);
+            }, 4000);
+        }
+
+        function closeSosModal() {
+            document.getElementById('sosModal').classList.remove('active');
+        }
+
+        // Settings Management
+        function togglePowerSaving() {
+            const toggle = document.getElementById('powerSavingToggle');
+            appState.settings.powerSaving = !appState.settings.powerSaving;
+            toggle.classList.toggle('active', appState.settings.powerSaving);
+            showToast(`Power saving ${appState.settings.powerSaving ? 'enabled' : 'disabled'}`, 'info');
+        }
+
+        function toggleEmergencyMode() {
+            const toggle = document.getElementById('emergencyModeToggle');
+            appState.settings.emergencyMode = !appState.settings.emergencyMode;
+            toggle.classList.toggle('active', appState.settings.emergencyMode);
+            showToast(`Emergency mode ${appState.settings.emergencyMode ? 'activated' : 'deactivated'}`, 'warning');
+        }
+
+        function toggleSOSAutoBroadcast() {
+            const toggle = document.getElementById('sosAutoBroadcast');
+            appState.settings.sosAutoBroadcast = !appState.settings.sosAutoBroadcast;
+            toggle.classList.toggle('active', appState.settings.sosAutoBroadcast);
+        }
+
+        function toggleLocationSharing() {
+            const toggle = document.getElementById('locationSharing');
+            appState.settings.locationSharing = !appState.settings.locationSharing;
+            toggle.classList.toggle('active', appState.settings.locationSharing);
+        }
+
+        function toggleEmergencyAlerts() {
+            const toggle = document.getElementById('emergencyAlerts');
+            appState.settings.emergencyAlerts = !appState.settings.emergencyAlerts;
+            toggle.classList.toggle('active', appState.settings.emergencyAlerts);
+        }
+
+        function toggleMessageEncryption() {
+            const toggle = document.getElementById('messageEncryption');
+            appState.settings.messageEncryption = !appState.settings.messageEncryption;
+            toggle.classList.toggle('active', appState.settings.messageEncryption);
+        }
+
+        function toggleAnonymousMode() {
+            const toggle = document.getElementById('anonymousMode');
+            appState.settings.anonymousMode = !appState.settings.anonymousMode;
+            toggle.classList.toggle('active', appState.settings.anonymousMode);
+        }
+
+        function toggleDarkMode() {
+            const toggle = document.getElementById('darkModeToggle');
+            appState.settings.darkMode = !appState.settings.darkMode;
+            toggle.classList.toggle('active', appState.settings.darkMode);
+            showToast('Dark mode coming in future update!', 'info');
+        }
+
+        function toggleSoundAlerts() {
+            const toggle = document.getElementById('soundAlerts');
+            appState.settings.soundAlerts = !appState.settings.soundAlerts;
+            toggle.classList.toggle('active', appState.settings.soundAlerts);
+        }
+
+        function toggleAutoReconnect() {
+            const toggle = document.getElementById('autoReconnectToggle');
+            appState.settings.autoReconnect = !appState.settings.autoReconnect;
+            toggle.classList.toggle('active', appState.settings.autoReconnect);
+        }
+
+        function toggleEncryption() {
+            const toggle = document.getElementById('encryptionToggle');
+            appState.settings.messageEncryption = !appState.settings.messageEncryption;
+            toggle.classList.toggle('active', appState.settings.messageEncryption);
+        }
+
+        function saveSettings() {
+            // Update user profile
+            appState.user.name = document.getElementById('displayName').value;
+            appState.user.role = document.getElementById('userRole').value;
+            appState.user.emergencyContact = document.getElementById('emergencyContactSetting').value;
+            
+            showToast('Settings saved successfully!', 'success');
+        }
+
+        function resetToDefaults() {
+            if (confirm('This will reset all settings to default values. Continue?')) {
+                // Reset toggles to default state
+                document.querySelectorAll('.toggle-switch').forEach(toggle => {
+                    const isDefaultActive = ['sosAutoBroadcast', 'locationSharing', 'emergencyAlerts', 
+                                           'messageEncryption', 'soundAlerts', 'autoReconnectToggle', 
+                                           'encryptionToggle'].includes(toggle.id);
+                    toggle.classList.toggle('active', isDefaultActive);
+                });
+                
+                showToast('Settings reset to defaults', 'info');
+            }
+        }
+
+        // Utility Functions
+        function updateSystemUptime() {
+            const uptime = Date.now() - appState.startTime;
+            const hours = Math.floor(uptime / (1000 * 60 * 60));
+            const minutes = Math.floor((uptime % (1000 * 60 * 60)) / (1000 * 60));
+            document.getElementById('systemUptime').textContent = `${hours}h ${minutes}m`;
+        }
+
+        function showToast(message, type = 'info') {
+            const toast = document.getElementById('toast');
+            toast.textContent = message;
+            toast.className = `toast ${type} show`;
+            
+            setTimeout(() => {
+                toast.classList.remove('show');
+            }, 3000);
+        }
+
+        function simulateNetworkActivity() {
+            // Simulate occasional network messages
+            setInterval(() => {
+                if (appState.network.isConnected && Math.random() < 0.1) {
+                    const networkMessages = [
+                        '📡 Network heartbeat - All systems operational',
+                        '🔄 Mesh route updated for optimal connectivity',
+                        '📊 Network health check completed - Status: Good',
+                        '🔐 Security scan completed - No threats detected'
+                    ];
+                    
+                    const message = networkMessages[Math.floor(Math.random() * networkMessages.length)];
+                    addMessage(message, false);
+                }
+            }, 30000); // Every 30 seconds
+        }
+
+        // Initialize the app when page loads
+        document.addEventListener('DOMContentLoaded', initApp);
+
+        // Handle clicks outside modals
+        document.addEventListener('click', function(event) {
+            if (event.target.classList.contains('modal')) {
+                event.target.classList.remove('active');
+            }
+        });
+
+        // Update template items to be clickable
+        document.addEventListener('DOMContentLoaded', function() {
+            const templateItems = document.querySelectorAll('.template-item');
+            templateItems.forEach(item => {
+                item.style.cursor = 'pointer';
+                item.style.padding = 'var(--spacing-sm)';
+                item.style.margin = 'var(--spacing-xs) 0';
+                item.style.borderRadius = 'var(--border-radius)';
+                item.style.transition = 'background-color 0.2s ease';
+                
+                item.addEventListener('mouseenter', () => {
+                    item.style.backgroundColor = 'var(--secondary)';
+                });
+                
+                item.addEventListener('mouseleave', () => {
+                    item.style.backgroundColor = 'transparent';
+                });
+            });
+        });
+    </script>
+</body>
+</html>
